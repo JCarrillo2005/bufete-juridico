@@ -29,9 +29,10 @@ Todos los nombres, casos y datos son ficticios; la aplicación no brinda asesor�
 | Parte | Estado |
 | --- | --- |
 | Frontend React (listado, apertura, detalle, historial y acciones) | Implementado |
-| Cliente HTTP contra los cinco endpoints del contrato | Implementado |
+| Cliente HTTP contra los endpoints del contrato | Implementado (falta `reabrir`) |
 | Validaciones de formulario y mensajes de error por campo | Implementado |
-| Backend ASP.NET Core con los cinco endpoints | Implementado y verificado |
+| Backend ASP.NET Core con los seis endpoints | Implementado y verificado |
+| Reapertura de expedientes cerrados con motivo e historial de cierres | Implementado y verificado (API); pendiente en la interfaz |
 
 La API ya incluye CORS abierto y no usa `UseHttpsRedirection`, por lo que el frontend puede
 llamarla por HTTP en `http://localhost:5125` sin ajustes adicionales.
@@ -122,6 +123,7 @@ valor por defecto.
 .
 ├── AGENTS.md                     # Guía para agentes de IA y colaboradores
 ├── README.md
+├── docs/                         # Prompts y material de apoyo
 ├── dotnet-api/                   # API ASP.NET Core (.NET 8)
 │   ├── Controllers/
 │   ├── Models/
@@ -136,7 +138,7 @@ valor por defecto.
     └── src/
         ├── api/
         │   ├── client.js         # fetch, errores HTTP y URL base
-        │   ├── expedientes.js    # los cinco endpoints
+        │   ├── expedientes.js    # endpoints del contrato
         │   └── normalizar.js     # adaptación de respuestas
         ├── components/
         │   ├── Alerta.jsx
@@ -176,6 +178,7 @@ valor por defecto.
 | Abrir | `POST /api/expedientes` | `{ solicitante, descripcion, responsable, categoria? }` |
 | Actividad | `POST /api/expedientes/{id}/actividades` | `{ descripcion, tipoActividad? }` |
 | Cambiar estado | `POST /api/expedientes/{id}/estado` | `{ nuevoEstado, motivoCierre? }` |
+| Reabrir | `POST /api/expedientes/{id}/reabrir` | `{ motivo }` |
 
 ### Formato de error
 
@@ -188,7 +191,7 @@ valor por defecto.
 }
 ```
 
-- `400`: error de validación con detalle por campo.
+- `400`: error de validación con detalle por campo. En la reapertura, el campo es `motivo`.
 - `404`: expediente inexistente.
 - `409`: operación no permitida por el estado actual.
 
@@ -224,6 +227,15 @@ Si no hay coincidencias, la API devuelve `[]`. El frontend muestra **“Sin resu
   "fechaApertura": "2026-10-31T08:15:00",
   "fechaCierre": "2026-10-31T08:50:00",
   "motivoCierre": "Acuerdo entre las partes.",
+  "cierres": [
+    {
+      "numero": 1,
+      "fechaCierre": "2026-10-31T08:50:00",
+      "motivoCierre": "Acuerdo entre las partes.",
+      "fechaReapertura": null,
+      "motivoReapertura": null
+    }
+  ],
   "historial": [
     {
       "tipo": "Apertura",
@@ -247,6 +259,7 @@ Si no hay coincidencias, la API devuelve `[]`. El frontend muestra **“Sin resu
       "estadoAnterior": "En seguimiento",
       "estadoNuevo": "Cerrado",
       "descripcion": "Cambio de estado: En seguimiento → Cerrado. Motivo: Acuerdo entre las partes.",
+      "motivo": "Acuerdo entre las partes.",
       "fecha": "2026-10-31T08:50:00"
     }
   ]
@@ -256,6 +269,20 @@ Si no hay coincidencias, la API devuelve `[]`. El frontend muestra **“Sin resu
 El historial debe llegar en orden cronológico. El frontend distingue visualmente `Apertura`,
 `Actividad` y `CambioEstado` con marcas y colores distintos. El motivo de cierre se muestra desde
 `motivoCierre` del expediente y también aparece en la descripción del último cambio de estado.
+
+### Reapertura y cierres acumulados
+
+`POST /api/expedientes/{id}/reabrir` solo funciona sobre un expediente `Cerrado`. El cuerpo exige
+`motivo` (texto recortado, no vacío, máximo 500 caracteres). La respuesta es el expediente
+completo, ya en estado `En seguimiento`, con `fechaCierre` y `motivoCierre` en `null`.
+
+- Cada cierre se conserva en `cierres[]` con su `numero`, `fechaCierre` y `motivoCierre`.
+- Al reabrir, el último cierre recibe `fechaReapertura` y `motivoReapertura`.
+- La reapertura también se agrega a `historial[]` como `CambioEstado` de `Cerrado` a
+  `En seguimiento`, con `motivo`.
+- Para volver a cerrar hace falta al menos una actividad **posterior a la última reapertura**.
+- Un expediente en `Abierto` o `En seguimiento` no se puede reabrir (`409`); uno inexistente
+  responde `404`. Un `motivo` vacío o demasiado largo responde `400` con `errores.motivo`.
 
 > `frontend/src/api/normalizar.js` tolera algunos nombres alternativos (`persona`,
 > `numeroExpediente`, `fechaCreacion`, etc.). Si el backend usa otros, ajústalo ahí una sola vez.
@@ -268,13 +295,20 @@ El historial debe llegar en orden cronológico. El frontend distingue visualment
    `Abierto`. El identificador sugerido es `EXP-0001`, `EXP-0002`, etc.
 3. **Estados:**
    - `Abierto` → `En seguimiento`: acción explícita del usuario.
-   - `En seguimiento` → `Cerrado`: requiere al menos una actividad y un `motivoCierre` no vacío.
-   - `Cerrado` es final: no admite actividades ni cambios de estado, pero sigue consultable.
+   - `En seguimiento` → `Cerrado`: requiere al menos una actividad **posterior a la última
+     reapertura** (o desde la apertura si nunca se reabrió) y un `motivoCierre` no vacío.
+   - `Cerrado` → `En seguimiento`: acción **Reabrir** con `motivo` obligatorio (máximo 500
+     caracteres). El cierre anterior se conserva y se le anota la fecha y el motivo de reapertura.
+   - Mientras está `Cerrado` no admite actividades ni cambios de estado, pero sigue consultable y
+     puede reabrirse.
 4. **Actividades:** solo en expedientes `Abierto` o `En seguimiento`; descripción obligatoria,
    fecha y hora automáticas, tipo opcional.
-5. **Historial:** la apertura y cada cambio de estado se registran automáticamente. Cada actividad
-   es una entrada independiente. El orden es cronológico.
-6. **Búsqueda:** por identificador o nombre/alias, con filtro opcional por estado. Sin resultados
+5. **Historial:** la apertura, las actividades, los cambios de estado y las reaperturas se
+   registran automáticamente. Cada actividad es una entrada independiente. El orden es
+   cronológico.
+6. **Cierres:** todos los cierres se acumulan en `cierres[]` y nunca se reemplazan; el cierre
+   vigente también se refleja en `fechaCierre` y `motivoCierre`, que vuelven a `null` al reabrir.
+7. **Búsqueda:** por identificador o nombre/alias, con filtro opcional por estado. Sin resultados
    se devuelve `[]`.
 
 ## Recorrido de la interfaz
@@ -300,8 +334,12 @@ El historial debe llegar en orden cronológico. El frontend distingue visualment
 - Formulario de actividad (descripción y tipo opcional).
 - Si está `Abierto`: botón **Pasar a En seguimiento**.
 - Si está `En seguimiento`: formulario de cierre con motivo. El botón se deshabilita si aún no
-  hay actividades.
-- Si está `Cerrado`: se ocultan los formularios y se muestra el motivo y la fecha de cierre.
+  hay actividades **posteriores a la última reapertura**.
+- Si está `Cerrado`: se ocultan los formularios de actividad y cierre, se muestra el motivo y la
+  fecha del cierre vigente, y aparece el formulario **Reabrir expediente** con `motivo`
+  obligatorio.
+- Se listan los cierres anteriores (`cierres[]`) con su motivo y, si corresponde, la fecha y el
+  motivo de reapertura.
 
 ## Pruebas rápidas
 
@@ -321,7 +359,14 @@ empezar desde cero, detén la API y elimina `dotnet-api/Data/expedientes.json`.
 8. Cerrar con actividad y `motivoCierre` vacío: `400`.
 9. Cerrar con actividad y motivo válido: `200`.
 10. Intentar una actividad o un cambio de estado sobre el cerrado: `409`.
-11. Detener la API, volver a ejecutarla y confirmar que los datos siguen en
+11. Reabrir un expediente cerrado sin `motivo`: `400` con `errores.motivo`. Con un motivo válido:
+    `200` y estado `En seguimiento`; el cierre anterior conserva su motivo y recibe
+    `fechaReapertura` y `motivoReapertura`.
+12. Intentar cerrar de nuevo sin actividad posterior a la reapertura: `409`. Registrar una
+    actividad y cerrar: `200`; `cierres[]` debe contener los dos cierres.
+13. Intentar reabrir un expediente que no está `Cerrado`: `409`. Reabrir un identificador
+    inexistente: `404`.
+14. Detener la API, volver a ejecutarla y confirmar que los datos siguen en
     `dotnet-api/Data/expedientes.json`.
 
 ### En la interfaz
@@ -332,8 +377,13 @@ empezar desde cero, detén la API y elimina `dotnet-api/Data/expedientes.json`.
 4. Abrir el detalle y revisar que el historial distinga los tres tipos de entrada.
 5. Registrar una actividad.
 6. Pasar a **En seguimiento** y cerrar con motivo.
-7. Confirmar que el expediente cerrado ya no muestra los formularios.
-8. Recargar el navegador y confirmar que los datos se conservan (los conserva la API).
+7. Confirmar que el expediente cerrado oculta los formularios de actividad y cierre y muestra la
+   acción **Reabrir expediente**.
+8. Reabrir con un motivo y comprobar que vuelve a `En seguimiento` y que el cierre anterior sigue
+   visible en `cierres[]`.
+9. Comprobar que el cierre se deshabilita hasta registrar una actividad posterior a la reapertura;
+   luego cerrar de nuevo y verificar que se acumulan los dos cierres.
+10. Recargar el navegador y confirmar que los datos se conservan (los conserva la API).
 
 ## Persistencia
 
@@ -341,7 +391,12 @@ La API guarda en `dotnet-api/Data/expedientes.json`. El repositorio incluye dos 
 ficticios para la demostración:
 
 - `EXP-0001`: María López, categoría Civil, **Cerrado**, con actividad, fecha y motivo de cierre.
+  Puede usarse para probar la reapertura.
 - `EXP-0002`: Carlos Ruiz, categoría Laboral, **En seguimiento**, sin actividad registrada.
+
+Los expedientes cerrados guardan todos sus cierres en `cierres[]`. Al iniciar, la API migra los
+cierres antiguos que solo tenían `fechaCierre` y `motivoCierre` creando su primera entrada en
+`cierres[]`; no se pierde información.
 
 La API crea el archivo y la carpeta `Data/` si no existen. Si quieres iniciar con el sistema vacío,
 detén la API y elimina el archivo; se volverá a crear en la siguiente apertura.
@@ -378,7 +433,8 @@ registran la apertura, anotan actividades y consultan el estado de un caso.
 - Historial: entradas de tipo Apertura, Actividad o CambioEstado, con fecha y hora.
 - El identificador, la fecha de apertura y el estado inicial los genera el sistema.
 - Los datos son ficticios; no se solicita información personal real ni documentos.
-- Un expediente cerrado se conserva para consulta y no se reabre.
+- Un expediente cerrado se conserva para consulta y puede reabrirse con un motivo; los cierres
+  anteriores no se borran.
 
 ## Responsabilidades del equipo
 
@@ -398,7 +454,7 @@ rutas y el backend mantiene los nombres de campo. Los cambios de contrato se hac
 | Decisión o necesidad | Aporte de la IA | Decisión del equipo y razón | Cómo se comprobó |
 | --- | --- | --- | --- |
 | Persistencia sin infraestructura | Proponía SQL Server, EF Core, JWT y cuatro proyectos para una arquitectura “profesional”. | Se descartó. Un solo Web API con JSON cumple “conservar los datos” sin migraciones ni configuración y cabe en 90 minutos. | Se reinició la API y se comprobó que `Data/expedientes.json` conserva los dos expedientes y sus estados. |
-| Alcance del frontend | Proponía login, roles, dashboard, clientes y catálogos. | Se recortó a tres vistas y cinco endpoints. Nada de eso se exige y habría consumido el tiempo de la demo. | `npm run lint` y `npm run build` sin errores; recorrido automatizado de listado, apertura, detalle, actividad y cierre. |
+| Alcance del frontend | Proponía login, roles, dashboard, clientes y catálogos. | Se recortó a tres vistas y cinco endpoints iniciales. Nada de eso se exige y habría consumido el tiempo de la demo. | `npm run lint` y `npm run build` sin errores; recorrido automatizado de listado, apertura, detalle, actividad y cierre. |
 | Validación y reglas de estado | Sugirió validar en el frontend y confiar en la interfaz. | Se validó en ambos lados, pero la API es la autoridad: devuelve `400`, `404` y `409` con mensajes claros. El frontend deshabilita acciones inválidas. | Pruebas de API: 400 con solicitante vacío y motivo vacío, 404 inexistente, 409 al cerrar desde Abierto o sin actividad y al operar un cerrado. |
 
 > Evidencia registrada el 31/10/2026 con pruebas de API y un recorrido automatizado en Edge headless.
@@ -410,13 +466,17 @@ rutas y el backend mantiene los nombres de campo. Los cambios de contrato se hac
 | 1. Apertura | Crear dos expedientes con identificadores distintos; rechazar obligatorios incompletos. | `EXP-0001` y `EXP-0002` creados; `solicitante: "   "` respondió `400` con `errores.solicitante`. | Cumple |
 | 2. Consulta | Localizar por identificador y persona, abrir detalle e historial; informar búsqueda sin resultados. | Búsqueda por `EXP-0002` y por `María`; `zzz` devolvió `[]` y la interfaz mostró “Sin resultados”; el detalle mostró el historial. | Cumple |
 | 3. Seguimiento y cierre | Agregar actividades, pasar a En seguimiento y cerrar con actividad y motivo; rechazar cierres inválidos y bloquear acciones en cerrado. | Actividad registrada, paso a En seguimiento y cierre con motivo; `409` al cerrar desde Abierto o sin actividad, `400` con motivo vacío; el cerrado bloqueó actividad y cambio de estado. | Cumple |
+| 4. Reapertura | Reabrir un cerrado con motivo; rechazar motivo vacío; exigir actividad posterior a la reapertura y conservar los cierres. | `400` con motivo vacío o mayor a 500 caracteres; `200` al reabrir con estado `En seguimiento`; `409` al cerrar sin actividad nueva; tras registrar actividad, segundo cierre y `cierres[]` con dos entradas; `409` al reabrir uno no cerrado y `404` al inexistente. | Cumple (API); interfaz pendiente |
 | Persistencia | Los datos se conservan al reiniciar la API. | Tras detener y volver a ejecutar la API, siguieron los dos expedientes con sus estados e historial. | Cumple |
 
 ### Verificación ejecutada
 
 - `npm run lint` sin errores ni advertencias.
 - `npm run build` exitoso.
-- Los cinco endpoints se probaron con respuestas `200`, `201`, `400`, `404` y `409`.
+- `dotnet build` sin errores.
+- Los seis endpoints se probaron con respuestas `200`, `201`, `400`, `404` y `409`.
+- Reapertura verificada: motivo obligatorio y máximo de 500 caracteres, conservación de cierres,
+  actividad obligatoria después de reabrir y rechazo de reapertura en estados no cerrados.
 - Recorrido de interfaz automatizado en Edge headless: listado, búsqueda, detalle, apertura,
   actividad, paso a En seguimiento y cierre.
 - Reinicio de la API para comprobar la persistencia en `Data/expedientes.json`.

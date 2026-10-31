@@ -14,6 +14,7 @@ Alcance mínimo (no agregar nada que no esté aquí sin justificarlo):
 - Listar y buscar por identificador o nombre/alias; filtro opcional por estado.
 - Registrar actividades en expedientes Abiertos o En seguimiento.
 - Pasar de Abierto a En seguimiento y cerrar desde En seguimiento con actividad previa y motivo.
+- Reabrir un expediente cerrado con motivo, conservando el historial de cierres.
 - Conservar el historial cronológico y los datos al reiniciar.
 
 Fuera de alcance: autenticación, JWT, roles, SQL Server, EF Core, dashboard, clientes, usuarios,
@@ -76,7 +77,7 @@ npm run build
 
 ## 4. Contrato de la API
 
-El frontend depende de estos cinco endpoints. No cambiar rutas ni nombres de campos sin actualizar
+El frontend depende de estos seis endpoints. No cambiar rutas ni nombres de campos sin actualizar
 `frontend/src/api/expedientes.js` y `frontend/src/api/normalizar.js`.
 
 | Acción | Método y ruta | Cuerpo |
@@ -86,26 +87,38 @@ El frontend depende de estos cinco endpoints. No cambiar rutas ni nombres de cam
 | Abrir | `POST /api/expedientes` | `{ solicitante, descripcion, responsable, categoria? }` |
 | Actividad | `POST /api/expedientes/{id}/actividades` | `{ descripcion, tipoActividad? }` |
 | Cambiar estado | `POST /api/expedientes/{id}/estado` | `{ nuevoEstado, motivoCierre? }` |
+| Reabrir | `POST /api/expedientes/{id}/reabrir` | `{ motivo }` |
 
 Respuestas de error:
 
-- `400`: `{ mensaje, errores: { campo: "qué corregir" } }`
+- `400`: `{ mensaje, errores: { campo: "qué corregir" } }`; en la reapertura el campo es `motivo`.
 - `404` y `409`: `{ mensaje }`
 
 El listado devuelve `[]` cuando no hay resultados. El detalle incluye `historial[]` en orden
-cronológico, con `tipo` igual a `Apertura`, `Actividad` o `CambioEstado`.
+cronológico, con `tipo` igual a `Apertura`, `Actividad` o `CambioEstado`, y `cierres[]` con todos
+los cierres del expediente (`numero`, `fechaCierre`, `motivoCierre`, `fechaReapertura?`,
+`motivoReapertura?`). Las entradas de historial de tipo `CambioEstado` pueden incluir `motivo`.
 
 ## 5. Reglas de negocio que no se pueden romper
 
 1. `solicitante`, `descripcion` y `responsable` se validan con `trim`; solo espacios es inválido.
 2. El identificador, la fecha/hora de apertura y el estado `Abierto` los genera el backend.
 3. `Abierto` solo pasa a `En seguimiento`.
-4. `En seguimiento` solo pasa a `Cerrado` si existe al menos una actividad y el motivo no está vacío.
-5. Un expediente `Cerrado` no admite actividades ni cambios de estado; sigue visible para consulta.
-6. La apertura y cada cambio de estado se guardan automáticamente en el historial.
-7. Los datos persisten en `dotnet-api/Data/expedientes.json` (o el almacenamiento que defina el
+4. `En seguimiento` solo pasa a `Cerrado` si existe al menos una actividad **posterior a la última
+   reapertura** (o desde la apertura si nunca se reabrió) y el motivo no está vacío (máximo 500
+   caracteres).
+5. Un expediente `Cerrado` no admite actividades ni cambios de estado, pero sigue visible para
+   consulta y puede reabrirse con `motivo` (no vacío, máximo 500 caracteres).
+6. Al reabrir, el expediente vuelve a `En seguimiento`; `fechaCierre` y `motivoCierre` quedan en
+   `null`, pero `cierres[]` se conserva y el último cierre recibe `fechaReapertura` y
+   `motivoReapertura`.
+7. Solo se reabre un expediente `Cerrado`; en cualquier otro estado la API responde `409`.
+8. La apertura, cada actividad, cada cambio de estado y cada reapertura se guardan automáticamente
+   en el historial.
+9. Los datos persisten en `dotnet-api/Data/expedientes.json` (o el almacenamiento que defina el
    backend). No usar memoria volátil para la entrega. El repositorio incluye dos expedientes de
-   demostración en ese archivo; no borrarlos sin una razón.
+   demostración en ese archivo; no borrarlos sin una razón. Al iniciar, la API migra los cierres
+   antiguos que solo tenían `fechaCierre`/`motivoCierre` a `cierres[]`.
 
 ## 6. Convenciones del frontend
 
@@ -121,7 +134,12 @@ cronológico, con `tipo` igual a `Apertura`, `Actividad` o `CambioEstado`.
 - Mantener accesibilidad básica: `label` asociado, `aria-invalid`, mensajes con `role="alert"`,
   foco visible y navegación por teclado.
 - El listado debe mostrar "Sin resultados" cuando la API devuelva `[]`.
-- En el detalle, los formularios se ocultan cuando el estado es `Cerrado`.
+- En el detalle, con estado `Cerrado` se ocultan los formularios de actividad y cierre, se muestra
+  el cierre vigente y aparece el formulario **Reabrir expediente** (`motivo` obligatorio, máximo
+  500 caracteres).
+- Para habilitar el cierre se cuenta la actividad **posterior a la última reapertura** (última
+  entrada `CambioEstado` con `estadoAnterior === "Cerrado"`), no cualquier actividad histórica.
+- Los cierres anteriores se leen de `cierres[]`; no se reconstruyen solo con el historial.
 
 ## 7. Zona sensible
 
@@ -138,6 +156,8 @@ cronológico, con `tipo` igual a `Apertura`, `Actividad` o `CambioEstado`.
 - `npm run lint` sin errores ni advertencias.
 - `npm run build` exitoso.
 - Recorrido manual: crear dos expedientes, buscar por id y alias, abrir detalle, registrar
-  actividad, pasar a En seguimiento, cerrar con motivo y comprobar que un cerrado rechaza cambios.
-- Confirmar que reiniciar la API conserva los datos.
+  actividad, pasar a En seguimiento, cerrar con motivo.
+- Comprobar que un cerrado rechaza actividad y cambio de estado, pero permite reabrir con motivo;
+  tras reabrir, exigir actividad nueva antes de cerrar y confirmar que `cierres[]` conserva ambos.
+- Confirmar que reiniciar la API conserva los datos y migra los cierres antiguos a `cierres[]`.
 - Actualizar la tabla de comprobación del `README.md` con resultados reales (Cumple / Parcial / No cumple).
