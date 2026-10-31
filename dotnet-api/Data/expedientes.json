@@ -9,6 +9,15 @@
     "fechaApertura": "2026-10-31T08:37:52.5230509-06:00",
     "fechaCierre": "2026-10-31T08:37:52.6531895-06:00",
     "motivoCierre": "Acuerdo entre las partes.",
+    "cierres": [
+      {
+        "numero": 1,
+        "fechaCierre": "2026-10-31T08:37:52.6531895-06:00",
+        "motivoCierre": "Acuerdo entre las partes.",
+        "fechaReapertura": null,
+        "motivoReapertura": null
+      }
+    ],
     "historial": [
       {
         "id": 1,
@@ -17,7 +26,8 @@
         "descripcion": "Expediente abierto.",
         "tipoActividad": null,
         "estadoAnterior": null,
-        "estadoNuevo": "Abierto"
+        "estadoNuevo": "Abierto",
+        "motivo": null
       },
       {
         "id": 2,
@@ -26,7 +36,8 @@
         "descripcion": "Entrevista inicial con la solicitante.",
         "tipoActividad": "Reuni\u00F3n",
         "estadoAnterior": null,
-        "estadoNuevo": null
+        "estadoNuevo": null,
+        "motivo": null
       },
       {
         "id": 3,
@@ -35,7 +46,8 @@
         "descripcion": "Cambio de estado: Abierto \u2192 En seguimiento.",
         "tipoActividad": null,
         "estadoAnterior": "Abierto",
-        "estadoNuevo": "En seguimiento"
+        "estadoNuevo": "En seguimiento",
+        "motivo": null
       },
       {
         "id": 4,
@@ -44,7 +56,8 @@
         "descripcion": "Cambio de estado: En seguimiento \u2192 Cerrado. Motivo: Acuerdo entre las partes.",
         "tipoActividad": null,
         "estadoAnterior": "En seguimiento",
-        "estadoNuevo": "Cerrado"
+        "estadoNuevo": "Cerrado",
+        "motivo": null
       }
     ]
   },
@@ -58,6 +71,7 @@
     "fechaApertura": "2026-10-31T08:37:52.572164-06:00",
     "fechaCierre": null,
     "motivoCierre": null,
+    "cierres": [],
     "historial": [
       {
         "id": 1,
@@ -66,7 +80,8 @@
         "descripcion": "Expediente abierto.",
         "tipoActividad": null,
         "estadoAnterior": null,
-        "estadoNuevo": "Abierto"
+        "estadoNuevo": "Abierto",
+        "motivo": null
       },
       {
         "id": 2,
@@ -75,7 +90,8 @@
         "descripcion": "Cambio de estado: Abierto \u2192 En seguimiento.",
         "tipoActividad": null,
         "estadoAnterior": "Abierto",
-        "estadoNuevo": "En seguimiento"
+        "estadoNuevo": "En seguimiento",
+        "motivo": null
       }
     ]
   }
