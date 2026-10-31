@@ -31,10 +31,10 @@ Todos los nombres, casos y datos son ficticios; la aplicación no brinda asesor�
 | Frontend React (listado, apertura, detalle, historial y acciones) | Implementado |
 | Cliente HTTP contra los cinco endpoints del contrato | Implementado |
 | Validaciones de formulario y mensajes de error por campo | Implementado |
-| Backend ASP.NET Core con los cinco endpoints | Debe estar expuesto según el contrato de este README |
+| Backend ASP.NET Core con los cinco endpoints | Implementado y verificado |
 
-> El frontend ya consume el contrato. Antes de la demostración, confirma que la API responda en
-> `http://localhost:5125` con las rutas y los campos que se describen más abajo.
+La API ya incluye CORS abierto y no usa `UseHttpsRedirection`, por lo que el frontend puede
+llamarla por HTTP en `http://localhost:5125` sin ajustes adicionales.
 
 ## Stack
 
@@ -45,7 +45,7 @@ Todos los nombres, casos y datos son ficticios; la aplicación no brinda asesor�
 
 ## Requisitos
 
-- .NET SDK 8.
+- .NET SDK 8 o superior. El proyecto apunta a `net8.0`.
 - Node.js 20.19+ o 22.12+ (recomendado: Node 22).
 - npm 10+.
 - Navegador moderno (Chrome, Edge o Firefox).
@@ -63,6 +63,9 @@ dotnet run --launch-profile http
 
 - API: <http://localhost:5125>
 - Swagger: <http://localhost:5125/swagger>
+
+> Si tu máquina solo tiene .NET 10 y no el runtime 8, ejecuta
+> `dotnet run --launch-profile http --roll-forward Major`.
 
 Si el puerto cambia, actualiza `frontend/.env` (ver la sección siguiente).
 
@@ -86,25 +89,11 @@ npm run lint
 npm run build
 ```
 
-### Ajustes necesarios en la API
+### CORS y HTTPS
 
-Si `dotnet-api/Program.cs` todavía es la plantilla, agrega CORS y quita la redirección HTTPS para
-que el navegador pueda llamar a la API por HTTP:
-
-```csharp
-builder.Services.AddCors(opciones =>
-    opciones.AddDefaultPolicy(politica =>
-        politica.WithOrigins("http://localhost:5173")
-                .AllowAnyHeader()
-                .AllowAnyMethod()));
-
-var app = builder.Build();
-
-// ...
-// app.UseHttpsRedirection();  // quitar: el frontend local usa http://localhost:5125
-app.UseCors();
-app.MapControllers();
-```
+La API del repositorio ya configura una política CORS abierta y no redirige a HTTPS. No necesitas
+tocar `Program.cs` para ejecutar el frontend local. Si en el futuro se restringe CORS, autoriza
+`http://localhost:5173`.
 
 No agregues autenticación ni JWT: el frontend no envía tokens y una redirección a login rompería
 el recorrido.
@@ -257,7 +246,7 @@ Si no hay coincidencias, la API devuelve `[]`. El frontend muestra **“Sin resu
       "tipo": "CambioEstado",
       "estadoAnterior": "En seguimiento",
       "estadoNuevo": "Cerrado",
-      "motivo": "Acuerdo entre las partes.",
+      "descripcion": "Cambio de estado: En seguimiento → Cerrado. Motivo: Acuerdo entre las partes.",
       "fecha": "2026-10-31T08:50:00"
     }
   ]
@@ -265,7 +254,8 @@ Si no hay coincidencias, la API devuelve `[]`. El frontend muestra **“Sin resu
 ```
 
 El historial debe llegar en orden cronológico. El frontend distingue visualmente `Apertura`,
-`Actividad` y `CambioEstado` con marcas y colores distintos.
+`Actividad` y `CambioEstado` con marcas y colores distintos. El motivo de cierre se muestra desde
+`motivoCierre` del expediente y también aparece en la descripción del último cambio de estado.
 
 > `frontend/src/api/normalizar.js` tolera algunos nombres alternativos (`persona`,
 > `numeroExpediente`, `fechaCreacion`, etc.). Si el backend usa otros, ajústalo ahí una sola vez.
@@ -315,6 +305,10 @@ El historial debe llegar en orden cronológico. El frontend distingue visualment
 
 ## Pruebas rápidas
 
+El repositorio ya incluye dos expedientes de demostración (`EXP-0001` cerrado y `EXP-0002` en
+seguimiento). Si repites la apertura, los identificadores nuevos continúan en `EXP-0003`. Para
+empezar desde cero, detén la API y elimina `dotnet-api/Data/expedientes.json`.
+
 ### Desde Swagger (`http://localhost:5125/swagger`)
 
 1. Crear dos expedientes. Deben recibir identificadores distintos (`EXP-0001`, `EXP-0002`).
@@ -343,12 +337,14 @@ El historial debe llegar en orden cronológico. El frontend distingue visualment
 
 ## Persistencia
 
-La API guarda en `dotnet-api/Data/expedientes.json` (ruta sugerida). Ese archivo debe sobrevivir a
-un reinicio del proceso.
+La API guarda en `dotnet-api/Data/expedientes.json`. El repositorio incluye dos expedientes
+ficticios para la demostración:
 
-Decisión pendiente de entrega: si quieres que los dos expedientes de demostración viajen en el
-repositorio, deja el JSON commiteado. Si prefieres no versionar datos, agrega `dotnet-api/Data/` al
-`.gitignore` y crea los expedientes durante la demo. No hagas ambas cosas a medias.
+- `EXP-0001`: María López, categoría Civil, **Cerrado**, con actividad, fecha y motivo de cierre.
+- `EXP-0002`: Carlos Ruiz, categoría Laboral, **En seguimiento**, sin actividad registrada.
+
+La API crea el archivo y la carpeta `Data/` si no existen. Si quieres iniciar con el sistema vacío,
+detén la API y elimina el archivo; se volverá a crear en la siguiente apertura.
 
 ## Limitaciones conocidas
 
@@ -401,24 +397,29 @@ rutas y el backend mantiene los nombres de campo. Los cambios de contrato se hac
 
 | Decisión o necesidad | Aporte de la IA | Decisión del equipo y razón | Cómo se comprobó |
 | --- | --- | --- | --- |
-| Persistencia sin infraestructura | Proponía SQL Server, EF Core, JWT y cuatro proyectos para una arquitectura “profesional”. | Se descartó. Un solo Web API con JSON cumple “conservar los datos” sin migraciones ni configuración y cabe en 90 minutos. | Reiniciar la API y verificar que `Data/expedientes.json` conserva los expedientes. |
-| Alcance del frontend | Proponía login, roles, dashboard, clientes y catálogos. | Se recortó a tres vistas y cinco endpoints. Nada de eso se exige y habría consumido el tiempo de la demo. | Recorrido manual de listado, apertura y detalle; `npm run build`. |
-| Validación y reglas de estado | Sugirió validar en el frontend y confiar en la interfaz. | Se validó en ambos lados, pero la API es la autoridad: devuelve `400`, `404` y `409` con mensajes claros. El frontend deshabilita acciones inválidas. | Pruebas en Swagger de cierre sin actividad, motivo vacío y cambio sobre un cerrado. |
+| Persistencia sin infraestructura | Proponía SQL Server, EF Core, JWT y cuatro proyectos para una arquitectura “profesional”. | Se descartó. Un solo Web API con JSON cumple “conservar los datos” sin migraciones ni configuración y cabe en 90 minutos. | Se reinició la API y se comprobó que `Data/expedientes.json` conserva los dos expedientes y sus estados. |
+| Alcance del frontend | Proponía login, roles, dashboard, clientes y catálogos. | Se recortó a tres vistas y cinco endpoints. Nada de eso se exige y habría consumido el tiempo de la demo. | `npm run lint` y `npm run build` sin errores; recorrido automatizado de listado, apertura, detalle, actividad y cierre. |
+| Validación y reglas de estado | Sugirió validar en el frontend y confiar en la interfaz. | Se validó en ambos lados, pero la API es la autoridad: devuelve `400`, `404` y `409` con mensajes claros. El frontend deshabilita acciones inválidas. | Pruebas de API: 400 con solicitante vacío y motivo vacío, 404 inexistente, 409 al cerrar desde Abierto o sin actividad y al operar un cerrado. |
 
-> Completar la columna “Cómo se comprobó” con la evidencia real de la demo. No declarar pruebas que
-> no se hayan ejecutado.
+> Evidencia registrada el 31/10/2026 con pruebas de API y un recorrido automatizado en Edge headless.
 
 ## Lista de comprobación
 
 | Recorrido | Comprobación esperada | Resultado observado | Estado |
 | --- | --- | --- | --- |
-| 1. Apertura | Crear dos expedientes con identificadores distintos; rechazar obligatorios incompletos. | Pendiente de registrar | Pendiente |
-| 2. Consulta | Localizar por identificador y persona, abrir detalle e historial; informar búsqueda sin resultados. | Pendiente de registrar | Pendiente |
-| 3. Seguimiento y cierre | Agregar actividades, pasar a En seguimiento y cerrar con actividad y motivo; rechazar cierres inválidos y bloquear acciones en cerrado. | Pendiente de registrar | Pendiente |
-| Persistencia | Los datos se conservan al reiniciar la API. | Pendiente de registrar | Pendiente |
+| 1. Apertura | Crear dos expedientes con identificadores distintos; rechazar obligatorios incompletos. | `EXP-0001` y `EXP-0002` creados; `solicitante: "   "` respondió `400` con `errores.solicitante`. | Cumple |
+| 2. Consulta | Localizar por identificador y persona, abrir detalle e historial; informar búsqueda sin resultados. | Búsqueda por `EXP-0002` y por `María`; `zzz` devolvió `[]` y la interfaz mostró “Sin resultados”; el detalle mostró el historial. | Cumple |
+| 3. Seguimiento y cierre | Agregar actividades, pasar a En seguimiento y cerrar con actividad y motivo; rechazar cierres inválidos y bloquear acciones en cerrado. | Actividad registrada, paso a En seguimiento y cierre con motivo; `409` al cerrar desde Abierto o sin actividad, `400` con motivo vacío; el cerrado bloqueó actividad y cambio de estado. | Cumple |
+| Persistencia | Los datos se conservan al reiniciar la API. | Tras detener y volver a ejecutar la API, siguieron los dos expedientes con sus estados e historial. | Cumple |
 
-Actualizar esta tabla después de cada prueba con **Cumple**, **Parcial** o **No cumple** y una nota
-breve. Si algo falla, documentarlo con honestidad.
+### Verificación ejecutada
+
+- `npm run lint` sin errores ni advertencias.
+- `npm run build` exitoso.
+- Los cinco endpoints se probaron con respuestas `200`, `201`, `400`, `404` y `409`.
+- Recorrido de interfaz automatizado en Edge headless: listado, búsqueda, detalle, apertura,
+  actividad, paso a En seguimiento y cierre.
+- Reinicio de la API para comprobar la persistencia en `Data/expedientes.json`.
 
 ## Recursos externos y uso de IA
 

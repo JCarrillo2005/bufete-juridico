@@ -55,6 +55,8 @@ dotnet run --launch-profile http
 
 - URL: `http://localhost:5125`
 - Swagger: `http://localhost:5125/swagger`
+- Si solo está instalado el runtime de .NET 10 y la app no arranca por falta de
+  `Microsoft.NETCore.App 8.0`, usar `dotnet run --launch-profile http --roll-forward Major`.
 
 ### Frontend
 
@@ -102,7 +104,8 @@ cronológico, con `tipo` igual a `Apertura`, `Actividad` o `CambioEstado`.
 5. Un expediente `Cerrado` no admite actividades ni cambios de estado; sigue visible para consulta.
 6. La apertura y cada cambio de estado se guardan automáticamente en el historial.
 7. Los datos persisten en `dotnet-api/Data/expedientes.json` (o el almacenamiento que defina el
-   backend). No usar memoria volátil para la entrega.
+   backend). No usar memoria volátil para la entrega. El repositorio incluye dos expedientes de
+   demostración en ese archivo; no borrarlos sin una razón.
 
 ## 6. Convenciones del frontend
 
