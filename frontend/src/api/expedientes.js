@@ -38,3 +38,11 @@ export async function cambiarEstado(id, cambio) {
     body: JSON.stringify(cambio),
   })
 }
+
+export async function reabrirExpediente(id, motivo) {
+  const datos = await peticion(`/api/expedientes/${encodeURIComponent(id)}/reabrir`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo }),
+  })
+  return normalizarExpediente(datos ?? {})
+}

@@ -4,6 +4,7 @@ import {
   cambiarEstado as cambiarEstadoApi,
   crearActividad,
   obtenerExpediente,
+  reabrirExpediente as reabrirExpedienteApi,
 } from '../api/expedientes'
 import Alerta from '../components/Alerta'
 import Campo from '../components/Campo'
@@ -18,7 +19,11 @@ import {
 } from '../utils/catalogos'
 import { errorDeCampo } from '../utils/errores'
 import { formatearFechaHora } from '../utils/formatos'
-import { clasificarTipoHistorial } from '../utils/historial'
+import {
+  clasificarTipoHistorial,
+  hayActividadDesdeUltimaReapertura,
+  indiceUltimaReapertura,
+} from '../utils/historial'
 
 const ACTIVIDAD_INICIAL = { descripcion: '', tipoActividad: '' }
 
@@ -35,6 +40,7 @@ export default function DetalleExpediente() {
   const [errores, setErrores] = useState({})
   const [actividad, setActividad] = useState(ACTIVIDAD_INICIAL)
   const [motivoCierre, setMotivoCierre] = useState('')
+  const [motivoReapertura, setMotivoReapertura] = useState('')
   const [enviando, setEnviando] = useState('')
 
   useEffect(() => {
@@ -129,6 +135,34 @@ export default function DetalleExpediente() {
     ejecutarCambioEstado(ESTADOS.CERRADO, motivo)
   }
 
+  async function reabrir(evento) {
+    evento.preventDefault()
+
+    const motivo = motivoReapertura.trim()
+    if (!motivo) {
+      setErrores({ motivo: 'Escribe el motivo de la reapertura.' })
+      setErrorAccion('Revisa los campos marcados antes de continuar.')
+      return
+    }
+
+    setEnviando('reabrir')
+    setErrorAccion('')
+    setErrores({})
+
+    try {
+      const actualizado = await reabrirExpedienteApi(id, motivo)
+      setExpediente(actualizado)
+      setMotivoReapertura('')
+      setErrores({})
+      setMensaje('Expediente reabierto correctamente. Ahora está En seguimiento.')
+    } catch (fallo) {
+      setErrorAccion(fallo.mensaje)
+      setErrores(fallo.errores ?? {})
+    } finally {
+      setEnviando('')
+    }
+  }
+
   if (cargando) {
     return <p className="cargando">Cargando expediente…</p>
   }
@@ -171,9 +205,8 @@ export default function DetalleExpediente() {
   const abierto = estaAbierto(expediente.estado)
   const enSeguimiento = estaEnSeguimiento(expediente.estado)
 
-  const tieneActividad = expediente.historial.some(
-    (entrada) => clasificarTipoHistorial(entrada.tipo) === 'actividad',
-  )
+  const tieneActividad = hayActividadDesdeUltimaReapertura(expediente.historial)
+  const huboReapertura = indiceUltimaReapertura(expediente.historial) >= 0
 
   const cierreEnHistorial = [...expediente.historial]
     .reverse()
@@ -183,18 +216,23 @@ export default function DetalleExpediente() {
         String(entrada.estadoNuevo ?? '').toLowerCase() === 'cerrado',
     )
 
+  const ultimoCierre = expediente.cierres.at(-1)
+
   const fechaApertura =
     expediente.fechaApertura ||
     expediente.historial.find(
       (entrada) => clasificarTipoHistorial(entrada.tipo) === 'apertura',
     )?.fecha
 
-  const fechaCierre = expediente.fechaCierre || cierreEnHistorial?.fecha
-  const motivoCierreMostrado = expediente.motivoCierre || cierreEnHistorial?.motivo
+  const fechaCierre =
+    expediente.fechaCierre || ultimoCierre?.fechaCierre || cierreEnHistorial?.fecha
+  const motivoCierreMostrado =
+    expediente.motivoCierre || ultimoCierre?.motivoCierre || cierreEnHistorial?.motivo
 
   const errorDescripcionActividad = errorDeCampo(errores, 'descripcion')
   const errorTipoActividad = errorDeCampo(errores, 'tipoActividad')
   const errorMotivoCierre = errorDeCampo(errores, 'motivoCierre')
+  const errorMotivoReapertura = errorDeCampo(errores, 'motivo')
 
   return (
     <section>
@@ -272,15 +310,63 @@ export default function DetalleExpediente() {
             </Alerta>
           )}
 
-          {cerrado ? (
-            <section className="tarjeta" aria-labelledby="expediente-cerrado">
-              <h2 id="expediente-cerrado">Expediente cerrado</h2>
-              <p className="texto-suave">
-                El expediente sigue disponible para consulta, pero no admite nuevas
-                actividades ni cambios de estado.
-              </p>
-            </section>
-          ) : (
+          {cerrado && (
+            <>
+              <section className="tarjeta" aria-labelledby="expediente-cerrado">
+                <h2 id="expediente-cerrado">Expediente cerrado</h2>
+                <p className="texto-suave">
+                  El expediente sigue disponible para consulta, pero no admite nuevas
+                  actividades ni cambios de estado.
+                </p>
+                <dl className="datos">
+                  <div>
+                    <dt>Cierre vigente</dt>
+                    <dd>{formatearFechaHora(fechaCierre)}</dd>
+                  </div>
+                  <div className="datos__ancho">
+                    <dt>Motivo de cierre</dt>
+                    <dd>{motivoCierreMostrado || '—'}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="tarjeta" aria-labelledby="reabrir-expediente">
+                <h2 id="reabrir-expediente">Reabrir expediente</h2>
+                <form className="formulario" onSubmit={reabrir} noValidate>
+                  <Campo
+                    id="motivo-reapertura"
+                    etiqueta="Motivo de la reapertura"
+                    requerido
+                    error={errorMotivoReapertura}
+                    ayuda="Explica por qué se retoma el caso. El cierre anterior se conservará."
+                  >
+                    <textarea
+                      id="motivo-reapertura"
+                      value={motivoReapertura}
+                      onChange={(evento) => setMotivoReapertura(evento.target.value)}
+                      maxLength={500}
+                      aria-invalid={Boolean(errorMotivoReapertura)}
+                      aria-describedby={
+                        errorMotivoReapertura ? 'motivo-reapertura-error' : undefined
+                      }
+                    />
+                  </Campo>
+
+                  <div className="formulario__acciones">
+                    <button
+                      type="submit"
+                      className="boton boton--primario"
+                      disabled={enviando === 'reabrir'}
+                    >
+                      {enviando === 'reabrir' ? 'Reabriendo…' : 'Reabrir expediente'}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </>
+          )}
+
+          {!cerrado && (
             <>
               <section className="tarjeta" aria-labelledby="registrar-actividad">
                 <h2 id="registrar-actividad">Registrar actividad</h2>
@@ -378,8 +464,9 @@ export default function DetalleExpediente() {
 
                     {!tieneActividad && (
                       <Alerta tipo="info">
-                        Aún no hay actividades registradas. Agrega una antes de cerrar el
-                        expediente.
+                        {huboReapertura
+                          ? 'Para cerrar de nuevo el expediente, registra una actividad después de la reapertura.'
+                          : 'Aún no hay actividades registradas. Agrega una antes de cerrar el expediente.'}
                       </Alerta>
                     )}
 
@@ -420,6 +507,37 @@ export default function DetalleExpediente() {
                 )}
               </section>
             </>
+          )}
+
+          {expediente.cierres.length > 0 && (
+            <section className="tarjeta" aria-labelledby="cierres-expediente">
+              <h2 id="cierres-expediente">Cierres y reaperturas</h2>
+              <p className="texto-suave">Se conservan todos los cierres del expediente.</p>
+              <ol className="cierres">
+                {expediente.cierres.map((cierre) => (
+                  <li
+                    className="cierres__item"
+                    key={`${cierre.numero}-${cierre.fechaCierre}`}
+                  >
+                    <div className="cierres__cabecera">
+                      <span className="cierres__numero">Cierre #{cierre.numero}</span>
+                      <span className="cierres__fecha">
+                        {formatearFechaHora(cierre.fechaCierre)}
+                      </span>
+                    </div>
+                    <p className="cierres__motivo">{cierre.motivoCierre || '—'}</p>
+                    {cierre.fechaReapertura && (
+                      <p className="cierres__reapertura">
+                        Reabierto el {formatearFechaHora(cierre.fechaReapertura)}
+                        {cierre.motivoReapertura
+                          ? ` — Motivo: ${cierre.motivoReapertura}`
+                          : ''}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </section>
           )}
         </div>
       </div>

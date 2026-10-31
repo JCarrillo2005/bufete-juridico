@@ -25,6 +25,40 @@ export function normalizarEntrada(entrada = {}) {
   }
 }
 
+export function normalizarCierre(cierre = {}, indice = 0) {
+  const numero = Number(primero(cierre.numero, cierre.numeroCierre, cierre.id))
+
+  return {
+    numero: Number.isFinite(numero) && numero > 0 ? numero : indice + 1,
+    fechaCierre: primero(cierre.fechaCierre, cierre.fecha),
+    motivoCierre: primero(cierre.motivoCierre, cierre.motivo),
+    fechaReapertura: primero(cierre.fechaReapertura),
+    motivoReapertura: primero(cierre.motivoReapertura),
+  }
+}
+
+function normalizarCierres(datos = {}) {
+  if (Array.isArray(datos.cierres)) {
+    return datos.cierres.map((cierre, indice) => normalizarCierre(cierre, indice))
+  }
+
+  // Compatibilidad: respuestas anteriores a cierres[] solo traían el cierre vigente.
+  if (datos.fechaCierre) {
+    return [
+      normalizarCierre(
+        {
+          numero: 1,
+          fechaCierre: datos.fechaCierre,
+          motivoCierre: datos.motivoCierre,
+        },
+        0,
+      ),
+    ]
+  }
+
+  return []
+}
+
 export function normalizarExpediente(datos = {}) {
   return {
     id: String(primero(datos.id, datos.numeroExpediente, datos.numero, datos.codigo)),
@@ -36,6 +70,7 @@ export function normalizarExpediente(datos = {}) {
     fechaApertura: primero(datos.fechaApertura, datos.fechaCreacion, datos.fecha),
     fechaCierre: primero(datos.fechaCierre),
     motivoCierre: primero(datos.motivoCierre, datos.motivo),
+    cierres: normalizarCierres(datos),
     historial: Array.isArray(datos.historial) ? datos.historial.map(normalizarEntrada) : [],
   }
 }

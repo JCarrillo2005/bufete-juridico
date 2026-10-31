@@ -691,6 +691,55 @@ a:hover {
   font-size: 0.75rem;
 }
 
+/* Cierres y reaperturas */
+.cierres {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cierres__item {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.cierres__cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.cierres__numero {
+  color: var(--azul-marino);
+  font-weight: 700;
+}
+
+.cierres__fecha {
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+}
+
+.cierres__motivo {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cierres__reapertura {
+  margin: 0.5rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--borde);
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
 /* Estados vacíos y carga */
 .vacio {
   padding: 2.5rem 1rem;

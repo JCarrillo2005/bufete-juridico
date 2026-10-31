@@ -29,10 +29,10 @@ Todos los nombres, casos y datos son ficticios; la aplicación no brinda asesor�
 | Parte | Estado |
 | --- | --- |
 | Frontend React (listado, apertura, detalle, historial y acciones) | Implementado |
-| Cliente HTTP contra los endpoints del contrato | Implementado (falta `reabrir`) |
+| Cliente HTTP contra los seis endpoints del contrato | Implementado |
 | Validaciones de formulario y mensajes de error por campo | Implementado |
 | Backend ASP.NET Core con los seis endpoints | Implementado y verificado |
-| Reapertura de expedientes cerrados con motivo e historial de cierres | Implementado y verificado (API); pendiente en la interfaz |
+| Reapertura de expedientes cerrados con motivo e historial de cierres | Implementado y verificado (API e interfaz) |
 
 La API ya incluye CORS abierto y no usa `UseHttpsRedirection`, por lo que el frontend puede
 llamarla por HTTP en `http://localhost:5125` sin ajustes adicionales.
@@ -466,7 +466,7 @@ rutas y el backend mantiene los nombres de campo. Los cambios de contrato se hac
 | 1. Apertura | Crear dos expedientes con identificadores distintos; rechazar obligatorios incompletos. | `EXP-0001` y `EXP-0002` creados; `solicitante: "   "` respondió `400` con `errores.solicitante`. | Cumple |
 | 2. Consulta | Localizar por identificador y persona, abrir detalle e historial; informar búsqueda sin resultados. | Búsqueda por `EXP-0002` y por `María`; `zzz` devolvió `[]` y la interfaz mostró “Sin resultados”; el detalle mostró el historial. | Cumple |
 | 3. Seguimiento y cierre | Agregar actividades, pasar a En seguimiento y cerrar con actividad y motivo; rechazar cierres inválidos y bloquear acciones en cerrado. | Actividad registrada, paso a En seguimiento y cierre con motivo; `409` al cerrar desde Abierto o sin actividad, `400` con motivo vacío; el cerrado bloqueó actividad y cambio de estado. | Cumple |
-| 4. Reapertura | Reabrir un cerrado con motivo; rechazar motivo vacío; exigir actividad posterior a la reapertura y conservar los cierres. | `400` con motivo vacío o mayor a 500 caracteres; `200` al reabrir con estado `En seguimiento`; `409` al cerrar sin actividad nueva; tras registrar actividad, segundo cierre y `cierres[]` con dos entradas; `409` al reabrir uno no cerrado y `404` al inexistente. | Cumple (API); interfaz pendiente |
+| 4. Reapertura | Reabrir un cerrado con motivo; rechazar motivo vacío; exigir actividad posterior a la reapertura y conservar los cierres. | La interfaz mostró el cierre vigente y `cierres[]`; el motivo vacío se marcó junto al campo sin llamar a la API; los errores `400` y `409` se mostraron al usuario; al reabrir pasó a `En seguimiento` sin recargar y el cierre se bloqueó hasta registrar una actividad nueva; tras el segundo cierre y la segunda reapertura siguieron visibles los dos cierres. En la API: `400` con motivo vacío, `200` al reabrir y `409` al repetir o reabrir uno no cerrado. | Cumple |
 | Persistencia | Los datos se conservan al reiniciar la API. | Tras detener y volver a ejecutar la API, siguieron los dos expedientes con sus estados e historial. | Cumple |
 
 ### Verificación ejecutada
@@ -478,7 +478,8 @@ rutas y el backend mantiene los nombres de campo. Los cambios de contrato se hac
 - Reapertura verificada: motivo obligatorio y máximo de 500 caracteres, conservación de cierres,
   actividad obligatoria después de reabrir y rechazo de reapertura en estados no cerrados.
 - Recorrido de interfaz automatizado en Edge headless: listado, búsqueda, detalle, apertura,
-  actividad, paso a En seguimiento y cierre.
+  actividad, paso a En seguimiento, cierre, reapertura y segundo ciclo de cierre y reapertura.
+  También se simularon respuestas `400` y `409` de la reapertura para comprobar los mensajes.
 - Reinicio de la API para comprobar la persistencia en `Data/expedientes.json`.
 
 ## Recursos externos y uso de IA
