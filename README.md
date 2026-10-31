@@ -19,6 +19,7 @@ Todos los nombres, casos y datos son ficticios; la aplicación no brinda asesor�
 - [Persistencia](#persistencia)
 - [Limitaciones conocidas](#limitaciones-conocidas)
 - [Ficha de análisis](#ficha-de-análisis)
+- [Arquitectura y decisiones](docs/arquitectura-y-decisiones.md)
 - [Responsabilidades del equipo](#responsabilidades-del-equipo)
 - [Tres decisiones con IA](#tres-decisiones-con-ia)
 - [Lista de comprobación](#lista-de-comprobación)
@@ -123,7 +124,7 @@ valor por defecto.
 .
 ├── AGENTS.md                     # Guía para agentes de IA y colaboradores
 ├── README.md
-├── docs/                         # Prompts y material de apoyo
+├── docs/                         # Prompts, arquitectura y material de apoyo
 ├── dotnet-api/                   # API ASP.NET Core (.NET 8)
 │   ├── Controllers/
 │   ├── Models/
@@ -412,6 +413,9 @@ detén la API y elimina el archivo; se volverá a crear en la siguiente apertura
 - La concurrencia sobre el archivo JSON no está diseñada para múltiples usuarios simultáneos.
 
 ## Ficha de análisis
+
+La explicación detallada de la arquitectura y de las decisiones de diseño está en
+[`docs/arquitectura-y-decisiones.md`](docs/arquitectura-y-decisiones.md).
 
 ### Problema y usuario
 
