@@ -1,24 +1,79 @@
 :root {
-  /* Paleta institucional */
-  --azul-marino: #1b2a41;
-  --azul-medio: #324a5f;
+  /* ── Paleta (nombres originales conservados) ── */
+  --azul-marino: #16294a;
+  --azul-medio: #2f4a6d;
   --dorado: #b08d57;
-  --fondo: #f5f6f8;
+  --fondo: #f6f3ee;
   --superficie: #ffffff;
-  --borde: #dfe3ea;
-  --texto: #1f2937;
-  --texto-suave: #5b6778;
+  --borde: #e2ddd3;
+  --texto: #1d2433;
+  --texto-suave: #566173;
 
-  /* Semánticos */
-  --exito: #1f7a4d;
+  /* ── Colores nuevos ── */
+  --superficie-elevada: #ffffff;
+  --superficie-suave: #faf8f4;
+  --tinta: #0f1c36;
+  --primario: var(--azul-marino);
+  --primario-hover: #21406b;
+  --acento: var(--dorado);
+  --acento-texto: #7d5d1f; /* dorado oscuro apto para texto (≥ 6:1 sobre blanco) */
+  --borde-fuerte: #c9c2b4;
+  --borde-control: #7c8696; /* ≥ 3:1 sobre blanco para campos */
+  --foco: #1f5fae;
+  --foco-oscuro: #f0d79f; /* foco sobre el encabezado azul */
+
+  /* Semánticos: texto, fondo y borde */
+  --exito: #1b6e45;
   --exito-fondo: #e8f5ee;
+  --exito-borde: #a9d6bd;
   --error: #b3261e;
   --error-fondo: #fdecea;
-  --aviso: #8a5a00;
+  --error-borde: #f0b6b0;
+  --aviso: #7a4f00;
   --aviso-fondo: #fdf3dc;
+  --aviso-borde: #ecd28f;
+  --info: #1d4f8f;
+  --info-fondo: #e8f1fb;
+  --info-borde: #b9d3f0;
+  --neutro: #3f4958;
+  --neutro-fondo: #eceff3;
+  --neutro-borde: #d3d9e1;
 
-  /* Forma */
-  --radio: 10px;
-  --sombra: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.06);
+  /* ── Espaciado (base 4/8 px) ── */
+  --e-1: 0.25rem;
+  --e-2: 0.5rem;
+  --e-3: 0.75rem;
+  --e-4: 1rem;
+  --e-5: 1.5rem;
+  --e-6: 2rem;
+  --e-7: 3rem;
+  --e-8: 4rem;
+
+  /* ── Forma ── */
+  --radio-sm: 8px;
+  --radio: 12px;
+  --radio-lg: 16px;
+  --sombra-1: 0 1px 2px rgba(22, 41, 74, 0.06);
+  --sombra-2: 0 1px 3px rgba(22, 41, 74, 0.08), 0 4px 12px rgba(22, 41, 74, 0.06);
+  --sombra-3: 0 8px 24px rgba(22, 41, 74, 0.14), 0 2px 6px rgba(22, 41, 74, 0.08);
+  --sombra: var(--sombra-2);
+
+  /* ── Movimiento ── */
+  --transicion: 160ms ease;
+
+  /* ── Tipografía ── */
   --fuente: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --fuente-display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --texto-xs: 0.75rem;
+  --texto-sm: 0.875rem;
+  --texto-base: 1rem;
+  --texto-lg: 1.125rem;
+  --texto-xl: 1.375rem;
+  --texto-2xl: 1.75rem;
+  --texto-3xl: 2.25rem;
+
+  /* ── Layout ── */
+  --ancho-contenido: 1200px;
+  --alto-encabezado: 4rem;
+  --alto-tactil: 2.75rem; /* 44 px */
 }

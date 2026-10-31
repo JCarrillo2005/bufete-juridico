@@ -1,59 +1,235 @@
+/* Breakpoints: 1024, 860, 720 (tabla a tarjetas) y 640 */
+
+@media (max-width: 1024px) {
+  .contenedor {
+    width: min(var(--ancho-contenido), 100% - 2.5rem);
+  }
+
+  .detalle {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  }
+
+  .franja {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .franja > div:nth-child(3) {
+    border-left: 0;
+  }
+
+  .franja > div:nth-child(n + 3) {
+    border-top: 1px solid var(--borde);
+  }
+}
+
 @media (max-width: 860px) {
-  .detalle__columnas {
+  .detalle {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      'lateral'
+      'principal';
+  }
+
+  /* Estado y acciones primero en pantallas angostas */
+  .detalle__lateral {
+    position: static;
+  }
+
+  .nav__separador {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .boton,
+  .campo input,
+  .campo select {
+    min-height: var(--alto-tactil);
+  }
+
+  .boton--pequeno {
+    min-height: var(--alto-tactil);
+    padding-inline: var(--e-4);
+    font-size: var(--texto-sm);
+  }
+
+  .chip__quitar,
+  .buscador__limpiar,
+  .alerta__cerrar {
+    width: var(--alto-tactil);
+    height: var(--alto-tactil);
+  }
+
+  .chip__quitar {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  /* Tabla → tarjetas apiladas (sin scroll horizontal) */
+  .tabla,
+  .tabla tbody,
+  .tabla tr,
+  .tabla td {
+    display: block;
+  }
+
+  .tabla thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .tabla tbody {
+    display: grid;
+    gap: var(--e-3);
+  }
+
+  .tabla tr {
+    padding: var(--e-3) var(--e-4);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    background: var(--superficie);
+    box-shadow: var(--sombra-1);
+  }
+
+  .tabla td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-3);
+    padding: var(--e-2) 0;
+    border-bottom: 1px solid var(--borde);
+    text-align: right;
+  }
+
+  .tabla td:last-child {
+    border-bottom: 0;
+  }
+
+  .tabla td::before {
+    content: attr(data-etiqueta);
+    flex: none;
+    max-width: 40%;
+    color: var(--texto-suave);
+    font-size: var(--texto-xs);
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .tabla td[data-etiqueta='']::before,
+  .tabla td:not([data-etiqueta])::before {
+    content: none;
+  }
+
+  .tabla__acciones {
+    justify-content: stretch;
+  }
+
+  .tabla__acciones .boton {
+    width: 100%;
+  }
+
+  .tabla__id {
+    font-size: var(--texto-base);
   }
 }
 
 @media (max-width: 640px) {
   .contenedor {
-    width: min(1120px, 100% - 1.5rem);
+    width: min(var(--ancho-contenido), 100% - 1.5rem);
   }
 
   .app-header__contenido {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
+    padding-block: var(--e-2);
+  }
+
+  .marca small {
+    display: none;
   }
 
   .nav {
-    justify-content: space-between;
+    flex: 1 1 100%;
+    gap: var(--e-2);
   }
 
   .nav__enlace {
     flex: 1;
-    text-align: center;
+    justify-content: center;
+    min-height: var(--alto-tactil);
   }
 
-  .pagina__encabezado {
+  .app-header {
+    position: static;
+  }
+
+  html {
+    scroll-padding-top: var(--e-4);
+  }
+
+  .tabla th {
+    top: 0;
+  }
+
+  .app-main {
+    padding-block: var(--e-4) var(--e-6);
+  }
+
+  .encabezado-pagina {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .pagina__encabezado > .boton {
+  .encabezado-pagina__acciones .boton {
+    flex: 1;
     width: 100%;
   }
 
-  .filtros {
+  .tarjeta {
+    padding: var(--e-4);
+  }
+
+  .filtros,
+  .grupo {
     grid-template-columns: 1fr;
   }
 
-  .filtros__limpiar {
-    width: 100%;
+  .franja {
+    grid-template-columns: 1fr;
+  }
+
+  .franja > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--borde);
   }
 
   .formulario__acciones {
     flex-direction: column-reverse;
   }
 
-  .formulario__acciones .boton {
+  .formulario__acciones .boton,
+  .accion-bloque .boton,
+  .dialogo__acciones .boton {
     width: 100%;
   }
 
-  .tabla {
-    font-size: 0.85rem;
+  .dialogo__acciones {
+    flex-direction: column-reverse;
   }
 
-  .tabla th,
-  .tabla td {
-    padding: 0.55rem;
+  /* Barra de acciones fija solo en el formulario de apertura */
+  .formulario__acciones--fija {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 calc(var(--e-4) * -1) calc(var(--e-4) * -1);
+    padding: var(--e-3) var(--e-4);
+    border-top: 1px solid var(--borde);
+    border-radius: 0 0 var(--radio) var(--radio);
+    background: var(--superficie);
+    box-shadow: 0 -6px 12px rgba(22, 41, 74, 0.06);
   }
 }
 
@@ -61,6 +237,7 @@
   *,
   *::before,
   *::after {
+    scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
