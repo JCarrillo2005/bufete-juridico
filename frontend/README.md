@@ -1,16 +1,58 @@
-# React + Vite
+# Frontend — Bufete Popular
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación React (Vite + React Router) para el prototipo de gestión de expedientes.
+La documentación completa del proyecto, el contrato de la API y las pruebas están en el
+[`README.md`](../README.md) de la raíz.
 
-Currently, two official plugins are available:
+## Ejecutar
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```powershell
+npm install
+npm run dev
+```
 
-## React Compiler
+- Aplicación: <http://localhost:5173>
+- API esperada: <http://localhost:5125>
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Configuración
 
-## Expanding the Oxlint configuration
+Copia `.env.example` como `.env` si necesitas cambiar la URL de la API:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```dotenv
+VITE_API_URL=http://localhost:5125
+```
+
+Sin `.env`, el cliente usa `http://localhost:5125` por defecto.
+
+## Scripts
+
+| Comando | Uso |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo con recarga en caliente |
+| `npm run build` | Compilación de producción en `dist/` |
+| `npm run preview` | Vista previa de la compilación |
+| `npm run lint` | Revisión con Oxlint |
+
+## Organización
+
+```text
+src/
+├── api/          # cliente fetch, endpoints y normalización de respuestas
+├── components/   # Alerta, Campo, EstadoBadge, HistorialTimeline
+├── hooks/        # useDebounce
+├── layouts/      # AppLayout
+├── pages/        # Listado, Nuevo, Detalle, No encontrado
+├── routes/       # AppRoutes
+├── styles/       # variables, global y responsive
+└── utils/        # catálogos, formatos, errores e historial
+```
+
+## Rutas
+
+| Ruta | Pantalla |
+| --- | --- |
+| `/expedientes` | Listado y búsqueda |
+| `/expedientes/nuevo` | Formulario de apertura |
+| `/expedientes/:id` | Detalle, historial y acciones |
+
+No hay login ni rutas protegidas: la API no usa autenticación.

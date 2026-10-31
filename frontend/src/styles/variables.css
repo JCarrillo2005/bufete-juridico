@@ -1,0 +1,24 @@
+:root {
+  /* Paleta institucional */
+  --azul-marino: #1b2a41;
+  --azul-medio: #324a5f;
+  --dorado: #b08d57;
+  --fondo: #f5f6f8;
+  --superficie: #ffffff;
+  --borde: #dfe3ea;
+  --texto: #1f2937;
+  --texto-suave: #5b6778;
+
+  /* Semánticos */
+  --exito: #1f7a4d;
+  --exito-fondo: #e8f5ee;
+  --error: #b3261e;
+  --error-fondo: #fdecea;
+  --aviso: #8a5a00;
+  --aviso-fondo: #fdf3dc;
+
+  /* Forma */
+  --radio: 10px;
+  --sombra: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.06);
+  --fuente: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
