@@ -1,0 +1,74 @@
+# ==========================================
+# Dependencias
+# ==========================================
+node_modules/
+/.pnp
+.pnp.js
+
+# ==========================================
+# Archivos de Entorno y Secretos (Seguridad)
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+
+# ==========================================
+# Compilación y Salida (Build)
+# ==========================================
+/build
+/dist
+/out
+/.next/
+*.tsbuildinfo
+
+# ==========================================
+# Logs y Caché
+# ==========================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+.eslintcache
+.stylelintcache
+.cache/
+.vite/
+
+# ==========================================
+# Visual Studio Code (.vscode)
+# ==========================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.code-workspace
+
+# ==========================================
+# Visual Studio (IDE completo - .vs)
+# ==========================================
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# ==========================================
+# Archivos del Sistema Operativo
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
