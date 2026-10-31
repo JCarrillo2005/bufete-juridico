@@ -1,8 +1,8 @@
-﻿using BufeteApi.Services;
-using dotnet_api.Models;
+﻿using dotnet_api.Models;
+using dotnet_api.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BufeteApi.Controllers;
+namespace dotnet_api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -49,5 +49,12 @@ public class ExpedientesController : ControllerBase
     public ActionResult<Expediente> CambiarEstado(string id, [FromBody] CambiarEstadoDto dto)
     {
         return Ok(_servicio.CambiarEstado(id, dto));
+    }
+
+    // POST api/expedientes/EXP-0001/reabrir
+    [HttpPost("{id}/reabrir")]
+    public ActionResult<Expediente> Reabrir(string id, [FromBody] ReabrirExpedienteDto dto)
+    {
+        return Ok(_servicio.Reabrir(id, dto));
     }
 }

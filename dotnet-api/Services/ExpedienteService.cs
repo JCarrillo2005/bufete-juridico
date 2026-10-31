@@ -2,8 +2,7 @@
 using dotnet_api.Services;
 using System.Text.Json;
 
-namespace BufeteApi.Services;
-
+namespace dotnet_api.Services;
 public class ExpedienteService
 {
     private static readonly string[] CategoriasValidas = { "Civil", "Familiar", "Laboral" };
@@ -31,6 +30,28 @@ public class ExpedienteService
         else
         {
             _expedientes = new();
+        }
+
+        // Compatibilidad: expedientes cerrados antes de existir la lista de cierres.
+        var huboCambios = false;
+        foreach (var e in _expedientes)
+        {
+            e.Cierres ??= new List<CierreRegistro>();
+            if (e.Estado == Estados.Cerrado && e.Cierres.Count == 0 && e.FechaCierre != null)
+            {
+                e.Cierres.Add(new CierreRegistro
+                {
+                    Numero = 1,
+                    FechaCierre = e.FechaCierre.Value,
+                    MotivoCierre = e.MotivoCierre ?? string.Empty
+                });
+                huboCambios = true;
+            }
+        }
+
+        if (huboCambios)
+        {
+            Guardar();
         }
     }
 
@@ -202,10 +223,13 @@ public class ExpedienteService
             var expediente = BuscarOFallar(id);
 
             if (expediente.Estado == Estados.Cerrado)
-                throw new ReglaNegocioException("El expediente está cerrado y no admite cambios de estado.");
+                throw new ReglaNegocioException(
+                    "El expediente está cerrado y no admite cambios de estado. " +
+                    "Para retomar el seguimiento use la acción Reabrir expediente.");
 
             var anterior = expediente.Estado;
             var ahora = DateTimeOffset.Now;
+            string? motivoHistorial = null;
 
             if (anterior == Estados.Abierto && nuevoEstado == Estados.EnSeguimiento)
             {
@@ -229,13 +253,27 @@ public class ExpedienteService
                     });
                 }
 
-                var hayActividad = expediente.Historial.Any(h => h.Tipo == TiposHistorial.Actividad);
-                if (!hayActividad)
-                    throw new ReglaNegocioException("Para cerrar el expediente debe registrar al menos una actividad.");
+                // Debe haber al menos una actividad desde la última reapertura
+                // (o desde el inicio, si nunca se ha reabierto).
+                if (!HayActividadDesdeUltimaReapertura(expediente))
+                {
+                    var mensaje = expediente.Cierres.Count == 0
+                        ? "Para cerrar el expediente debe registrar al menos una actividad."
+                        : "Para cerrar de nuevo el expediente debe registrar al menos una actividad después de la reapertura.";
+                    throw new ReglaNegocioException(mensaje);
+                }
 
                 expediente.Estado = Estados.Cerrado;
                 expediente.FechaCierre = ahora;
                 expediente.MotivoCierre = motivo;
+                motivoHistorial = motivo;
+
+                expediente.Cierres.Add(new CierreRegistro
+                {
+                    Numero = expediente.Cierres.Count + 1,
+                    FechaCierre = ahora,
+                    MotivoCierre = motivo
+                });
             }
             else
             {
@@ -253,12 +291,88 @@ public class ExpedienteService
                     ? $"Cambio de estado: {anterior} → {nuevoEstado}. Motivo: {motivo}"
                     : $"Cambio de estado: {anterior} → {nuevoEstado}.",
                 EstadoAnterior = anterior,
-                EstadoNuevo = nuevoEstado
+                EstadoNuevo = nuevoEstado,
+                Motivo = motivoHistorial
             });
 
             Guardar();
             return expediente;
         }
+    }
+
+    public Expediente Reabrir(string id, ReabrirExpedienteDto dto)
+    {
+        var motivo = (dto.Motivo ?? string.Empty).Trim();
+
+        lock (_candado)
+        {
+            var expediente = BuscarOFallar(id);
+
+            if (expediente.Estado != Estados.Cerrado)
+            {
+                throw new ReglaNegocioException(
+                    $"Solo se puede reabrir un expediente cerrado. El expediente está \"{expediente.Estado}\".");
+            }
+
+            if (motivo.Length == 0)
+            {
+                throw new ValidacionException(new Dictionary<string, string>
+                {
+                    ["motivo"] = "Ingrese el motivo de la reapertura; no puede estar vacío ni tener solo espacios."
+                });
+            }
+
+            if (motivo.Length > 500)
+            {
+                throw new ValidacionException(new Dictionary<string, string>
+                {
+                    ["motivo"] = "El motivo de la reapertura no puede superar 500 caracteres."
+                });
+            }
+
+            var ahora = DateTimeOffset.Now;
+
+            // El cierre anterior se conserva; solo se le anota la reapertura.
+            var ultimoCierre = expediente.Cierres.LastOrDefault();
+            if (ultimoCierre != null)
+            {
+                ultimoCierre.FechaReapertura = ahora;
+                ultimoCierre.MotivoReapertura = motivo;
+            }
+
+            expediente.Estado = Estados.EnSeguimiento;
+            expediente.FechaCierre = null;
+            expediente.MotivoCierre = null;
+
+            expediente.Historial.Add(new HistorialEntrada
+            {
+                Id = expediente.Historial.Count + 1,
+                Tipo = TiposHistorial.CambioEstado,
+                Fecha = ahora,
+                Descripcion = $"Reapertura: {Estados.Cerrado} → {Estados.EnSeguimiento}. Motivo: {motivo}",
+                EstadoAnterior = Estados.Cerrado,
+                EstadoNuevo = Estados.EnSeguimiento,
+                Motivo = motivo
+            });
+
+            Guardar();
+            return expediente;
+        }
+    }
+
+    // Se llama siempre dentro del lock.
+    private static bool HayActividadDesdeUltimaReapertura(Expediente expediente)
+    {
+        var indiceReapertura = expediente.Historial.FindLastIndex(h =>
+            h.Tipo == TiposHistorial.CambioEstado && h.EstadoAnterior == Estados.Cerrado);
+
+        for (var i = indiceReapertura + 1; i < expediente.Historial.Count; i++)
+        {
+            if (expediente.Historial[i].Tipo == TiposHistorial.Actividad)
+                return true;
+        }
+
+        return false;
     }
 
     // Se llama siempre dentro del lock.

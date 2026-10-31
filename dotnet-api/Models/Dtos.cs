@@ -29,3 +29,9 @@ public class ExpedienteResumenDto
     public string? Categoria { get; set; }
     public DateTimeOffset FechaApertura { get; set; }
 }
+
+public class ReabrirExpedienteDto
+{
+    public string? Motivo { get; set; }
+}
+

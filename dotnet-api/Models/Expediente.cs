@@ -25,6 +25,16 @@ public class HistorialEntrada
     public string? TipoActividad { get; set; }
     public string? EstadoAnterior { get; set; }
     public string? EstadoNuevo { get; set; }
+    public string? Motivo { get; set; }
+}
+
+public class CierreRegistro
+{
+    public int Numero { get; set; }
+    public DateTimeOffset FechaCierre { get; set; }
+    public string MotivoCierre { get; set; } = string.Empty;
+    public DateTimeOffset? FechaReapertura { get; set; }
+    public string? MotivoReapertura { get; set; }
 }
 
 public class Expediente
@@ -36,7 +46,13 @@ public class Expediente
     public string? Categoria { get; set; }
     public string Estado { get; set; } = Estados.Abierto;
     public DateTimeOffset FechaApertura { get; set; }
+
+    // Datos del cierre vigente. Son null mientras el expediente no está cerrado.
     public DateTimeOffset? FechaCierre { get; set; }
     public string? MotivoCierre { get; set; }
+
+    // Todos los cierres que ha tenido el expediente (nunca se reemplazan).
+    public List<CierreRegistro> Cierres { get; set; } = new();
+
     public List<HistorialEntrada> Historial { get; set; } = new();
 }
